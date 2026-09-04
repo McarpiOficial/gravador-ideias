@@ -1,7 +1,7 @@
 // Rede primeiro, cache como rede de segurança. Assim o app nunca serve um
 // arquivo velho quando está online, e continua abrindo offline.
 
-const CACHE = 'gravador-ideias-v2';
+const CACHE = 'gravador-ideias-v3';
 const ASSETS = [
   '.',
   'index.html',
