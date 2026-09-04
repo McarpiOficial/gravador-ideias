@@ -18,16 +18,20 @@ export function createRecognizer({ onInterim, onFinal, onError, onEnd } = {}) {
   rec.maxAlternatives = 1;
 
   let finalText = '';
+  // Reconstrói o texto final inteiro a partir de event.results a cada
+  // chamada, em vez de acumular a partir de event.resultIndex: em modo
+  // `continuous`, o navegador às vezes reemite um resultado que já tinha
+  // ficado final com um resultIndex mais antigo, e acumular fazia essa fala
+  // ser colada de novo no final, repetindo trechos a cada pausa.
   rec.onresult = (event) => {
+    let texto = '';
     let interim = '';
-    for (let i = event.resultIndex; i < event.results.length; i += 1) {
+    for (let i = 0; i < event.results.length; i += 1) {
       const chunk = event.results[i][0].transcript;
-      if (event.results[i].isFinal) {
-        finalText = (finalText + ' ' + chunk).trim();
-      } else {
-        interim += chunk;
-      }
+      if (event.results[i].isFinal) texto += (texto ? ' ' : '') + chunk.trim();
+      else interim += chunk;
     }
+    finalText = texto;
     onInterim?.((finalText + ' ' + interim).trim());
   };
   rec.onerror = (event) => onError?.(event.error);
