@@ -1,0 +1,55 @@
+// Rede primeiro, cache como rede de segurança. Assim o app nunca serve um
+// arquivo velho quando está online, e continua abrindo offline.
+
+const CACHE = 'gravador-ideias-v1';
+const ASSETS = [
+  '.',
+  'index.html',
+  'styles.css',
+  'manifest.webmanifest',
+  'icon.svg',
+  'icon-maskable.svg',
+  'icon-192.png',
+  'icon-512.png',
+  'icon-maskable-512.png',
+  'js/app.js',
+  'js/ui.js',
+  'js/store.js',
+  'js/voice.js',
+  'js/email.js',
+  'js/version.js',
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()),
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+
+  event.respondWith(
+    // cache: 'reload' ignora o cache HTTP do navegador (o GitHub Pages manda
+    // Cache-Control: max-age=600) - sem isso, "rede primeiro" às vezes só
+    // lia um arquivo velho que o próprio navegador tinha guardado.
+    fetch(request, { cache: 'reload' })
+      .then((response) => {
+        if (response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(request, copy));
+        }
+        return response;
+      })
+      .catch(() => caches.match(request).then((hit) => hit || caches.match('index.html'))),
+  );
+});
